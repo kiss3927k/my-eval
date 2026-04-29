@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한지쌤 AI 평가</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <title>한지쌤 AI 평가 시스템</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // 아래 줄에 선생님의 원본 코드를 그대로 붙여넣으세요.
-        // import React, { useState, useEffect, useMemo } from 'react';
+        // ---------------------------------------------------------
+        // 여기서부터 선생님의 원본 코드를 붙여넣으세요.
+        import React, { useState, useEffect, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc } from 'firebase/firestore';
@@ -588,6 +589,21 @@ const App = () => {
 };
 
 export default App;
-    </script>
-</body>
-</html>
+        // (import 문장들은 무시해도 됩니다. 아래에 그대로 붙이세요.)
+        
+        const { useState, useEffect, useMemo } = React;
+        const { initializeApp } = firebase.app;
+        const { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } = firebase.auth;
+        const { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc } = firebase.firestore;
+        
+        // 아이콘 도구 연결
+        const { 
+          Sparkles, ClipboardCheck, MessageSquare, Image: ImageIcon, 
+          RefreshCw, ChevronRight, User, BookOpen, FileText, X, 
+          MousePointerSquareDashed, CheckCircle, Download, History, 
+          TrendingUp, ChevronDown, ChevronUp, Search, Tag: TagIcon, 
+          Cloud, Lightbulb, PlusCircle, Filter, Edit3, Send, Table, GraduationCap,
+          Loader2
+        } = lucide;
+
+        // --- 선생님의 원본 코드 시작 (아래에 붙여넣기) ---
