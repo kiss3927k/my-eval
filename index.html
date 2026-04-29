@@ -16,60 +16,81 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
+        // 도구 설정
         const { useState, useEffect, useMemo } = React;
         const { Sparkles, ClipboardCheck, MessageSquare, Image: ImageIcon, RefreshCw, ChevronRight, User, BookOpen, FileText, X, MousePointerSquareDashed, CheckCircle, Download, History, TrendingUp, ChevronDown, ChevronUp, Search, Tag: TagIcon, Cloud, Lightbulb, PlusCircle, Filter, Edit3, Send, Table, GraduationCap, Loader2 } = lucide;
 
-        // 에러 방지용 임시 설정
+        // --- 선생님의 원본 코드 시작 ---
+        
+        // 파이베이서 설정 (임시 방어 코드 포함)
         const firebaseConfig = { apiKey: "temp", projectId: "temp" };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        if (!window.firebase.apps.length) {
+            window.firebase.initializeApp(firebaseConfig);
+        }
+        const auth = window.firebase.auth();
+        const db = window.firebase.firestore();
 
         const App = () => {
             const [step, setStep] = useState(1);
-            const [standardTag, setStandardTag] = useState('');
-            const [standard, setStandard] = useState('');
+            const [standardTag, setStandardTag] = useState(localStorage.getItem('hanji_std_tag') || '');
+            const [standard, setStandard] = useState(localStorage.getItem('hanji_std_content') || '');
             const [studentName, setStudentName] = useState('');
             const [taskContent, setTaskContent] = useState('');
+            const apiKey = "AIzaSyD5ffyr61te_nF4HwsAG41BOQ79lczEzGw";
 
             return (
-                <div className="min-h-screen bg-[#FDFCFB] text-slate-800 p-8 font-sans">
-                    <div className="max-w-4xl mx-auto">
-                        <header className="mb-10 flex items-center gap-4 border-b pb-6">
-                            <GraduationCap className="w-10 h-10 text-amber-500" />
-                            <h1 className="text-2xl font-black">한지쌤 AI 평가 시스템</h1>
+                <div className="min-h-screen bg-[#FDFCFB] text-slate-800 p-4 md:p-8 font-sans">
+                    <div className="max-w-[1600px] mx-auto">
+                        <header className="mb-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100 shadow-sm">
+                                    <GraduationCap className="w-8 h-8 text-amber-500" />
+                                </div>
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">한지쌤의 AI 서논술형 평가</h1>
+                            </div>
                         </header>
 
-                        <div className="bg-white p-10 rounded-[2rem] shadow-lg border">
-                            {step === 1 && (
-                                <div className="space-y-6">
-                                    <h2 className="text-xl font-bold flex items-center gap-2">
-                                        <BookOpen className="w-6 h-6 text-amber-500" /> 평가 활동지 설정
-                                    </h2>
-                                    <input type="text" className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="성취기준 태그 (예: 4과02-01)" value={standardTag} onChange={(e) => setStandardTag(e.target.value)} />
-                                    <textarea className="w-full h-32 p-4 bg-slate-50 border rounded-xl" placeholder="활동지 질문 내용" value={standard} onChange={(e) => setStandard(e.target.value)} />
-                                    <button onClick={() => setStep(2)} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold">다음 단계</button>
-                                </div>
-                            )}
-
-                            {step === 2 && (
-                                <div className="space-y-6">
-                                    <h2 className="text-xl font-bold flex items-center gap-2">
-                                        <User className="w-6 h-6 text-amber-500" /> 학생 과제 입력
-                                    </h2>
-                                    <input type="text" className="w-full p-4 bg-slate-50 border rounded-xl" placeholder="학생 이름" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
-                                    <textarea className="w-full h-48 p-4 bg-slate-50 border rounded-xl" placeholder="학생 답변 내용" value={taskContent} onChange={(e) => setTaskContent(e.target.value)} />
-                                    <div className="flex gap-4">
-                                        <button onClick={() => setStep(1)} className="flex-1 bg-slate-100 py-4 rounded-xl font-bold">뒤로가기</button>
-                                        <button className="flex-[2] bg-amber-400 py-4 rounded-xl font-bold shadow-md">AI 평가 시작</button>
+                        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
+                            <div className="p-8 md:p-14">
+                                {step === 1 && (
+                                    <div className="space-y-10">
+                                        <h2 className="text-2xl font-black text-slate-900 flex items-center gap-4"><BookOpen className="w-8 h-8 text-amber-500" /> 평가 활동지 설정</h2>
+                                        <div className="space-y-8">
+                                            <div className="space-y-3">
+                                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1"><TagIcon className="w-4 h-4 inline mr-1" /> 성취기준 태그</label>
+                                                <input type="text" className="w-full p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] outline-none font-black text-lg focus:border-amber-400 transition-all shadow-inner" placeholder="예: 4과02-01" value={standardTag} onChange={(e) => setStandardTag(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1"><FileText className="w-4 h-4 inline mr-1" /> 활동지 내용</label>
+                                                <textarea className="w-full h-44 p-8 bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] outline-none focus:border-amber-400 transition-all text-slate-700 font-medium shadow-inner" placeholder="질문들을 적어주세요." value={standard} onChange={(e) => setStandard(e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setStep(2)} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-xl hover:bg-slate-800 transition-all shadow-xl">다음 단계</button>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                                {step === 2 && (
+                                    <div className="space-y-12">
+                                        <div className="flex items-center justify-between border-b-2 border-slate-50 pb-8">
+                                            <div className="flex items-center gap-5"><div className="bg-amber-400 text-white px-5 py-2 rounded-2xl font-black text-sm">{standardTag}</div><h2 className="text-3xl font-black text-slate-900 tracking-tighter">학생 과제 평가</h2></div>
+                                            <button onClick={() => setStep(1)} className="text-sm font-black text-slate-400 hover:text-slate-600 bg-slate-50 px-5 py-2.5 rounded-2xl">기준 수정</button>
+                                        </div>
+                                        <div className="space-y-10">
+                                            <div className="space-y-4">
+                                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2"><User className="w-4 h-4"/> 학생 이름</label>
+                                                <input type="text" className="w-full p-7 bg-slate-50 border-2 border-slate-50 rounded-[2rem] outline-none font-black text-3xl focus:border-amber-400 transition-all shadow-inner" placeholder="이름 입력" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">답변 내용</label>
+                                                <textarea className="w-full h-60 p-8 bg-slate-50 border-2 border-slate-50 rounded-[2rem] outline-none focus:border-amber-400 transition-all text-base font-medium shadow-inner" placeholder="학생의 답변을 입력하세요." value={taskContent} onChange={(e) => setTaskContent(e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <button className="w-full bg-amber-400 text-slate-900 py-8 rounded-[2rem] font-black text-2xl hover:bg-amber-300 transition-all flex items-center justify-center gap-5 shadow-lg">
+                                            <Sparkles className="w-8 h-8" /> 교사 정밀 평가 시작 (준비 중)
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        
-                        <p className="mt-8 text-center text-slate-400 text-sm italic">
-                            화면이 정상적으로 보인다면 이제 기능을 하나씩 연결하면 됩니다!
-                        </p>
                     </div>
                 </div>
             );
