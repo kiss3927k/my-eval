@@ -11,215 +11,581 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+    </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // 1. 필요한 도구 연결
+        // 엔진 설정
         const { useState, useEffect, useMemo } = React;
         const { initializeApp } = firebase;
-        const { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } = firebase.auth;
-        const { getFirestore, collection, addDoc, onSnapshot, query, doc, setDoc } = firebase.firestore;
+        const firebaseApp = firebase;
         const { Sparkles, ClipboardCheck, MessageSquare, Image: ImageIcon, RefreshCw, ChevronRight, User, BookOpen, FileText, X, MousePointerSquareDashed, CheckCircle, Download, History, TrendingUp, ChevronDown, ChevronUp, Search, Tag: TagIcon, Cloud, Lightbulb, PlusCircle, Filter, Edit3, Send, Table, GraduationCap, Loader2 } = lucide;
 
-        // 2. 선생님의 코드 시작
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // --- 선생님의 원본 코드 시작 (수정 없음) ---
+        
+        // Firebase 초기화
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
 
         const App = () => {
-          const [user, setUser] = useState(null);
-          const [step, setStep] = useState(1); 
-          
-          const [standardTag, setStandardTag] = useState(localStorage.getItem('hanji_std_tag') || '');
-          const [standard, setStandard] = useState(localStorage.getItem('hanji_std_content') || '');
-          const [standardImage, setStandardImage] = useState(null); 
-          const [studentName, setStudentName] = useState('');
-          const [taskContent, setTaskContent] = useState('');
-          const [taskImage, setTaskImage] = useState(null);
-          const [isAnalyzing, setIsAnalyzing] = useState(false);
-          const [result, setResult] = useState(null);
-          const [history, setHistory] = useState([]);
-          const [teacherRevisionPrompt, setTeacherRevisionPrompt] = useState('');
-          const [showSuccessToast, setShowSuccessToast] = useState(false);
-          const [nameFilter, setNameFilter] = useState('all');
-          const [tagFilter, setTagFilter] = useState('all');
-          const [expandedStudent, setExpandedStudent] = useState(null);
-          const [isDragging, setIsDragging] = useState(false);
+          const [user, setUser] = useState(null);
+          const [step, setStep] = useState(1); 
+          
+          // 상태 관리
+          const [standardTag, setStandardTag] = useState(localStorage.getItem('hanji_std_tag') || '');
+          const [standard, setStandard] = useState(localStorage.getItem('hanji_std_content') || '');
+          const [standardImage, setStandardImage] = useState(null); 
+          const [studentName, setStudentName] = useState('');
+          const [taskContent, setTaskContent] = useState('');
+          const [taskImage, setTaskImage] = useState(null);
+          const [isAnalyzing, setIsAnalyzing] = useState(false);
+          const [result, setResult] = useState(null);
+          const [history, setHistory] = useState([]);
+          
+          // 교사 수정 의견 상태
+          const [teacherRevisionPrompt, setTeacherRevisionPrompt] = useState('');
+          const [showSuccessToast, setShowSuccessToast] = useState(false);
+          
+          // 드롭박스 필터 상태
+          const [nameFilter, setNameFilter] = useState('all');
+          const [tagFilter, setTagFilter] = useState('all');
+          const [expandedStudent, setExpandedStudent] = useState(null);
+          const [isDragging, setIsDragging] = useState(false);
 
-          const apiKey = "AIzaSyD5ffyr61te_nF4HwsAG41BOQ79lczEzGw"; // 여기에 선생님의 Gemini API 키를 넣으세요!
+          const apiKey = "AIzaSyD5ffyr61te_nF4HwsAG41BOQ79lczEzGw"; 
 
-          useEffect(() => {
-            const initAuth = async () => {
-              try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                  await auth.signInWithCustomToken(__initial_auth_token);
-                } else {
-                  await auth.signInAnonymously();
-                }
-              } catch (err) {
-                console.error("Auth failed:", err);
-              }
-            };
-            initAuth();
-            const unsubscribe = auth.onAuthStateChanged(setUser);
-            return () => unsubscribe();
-          }, []);
+          useEffect(() => {
+            const initAuth = async () => {
+              try {
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                  await auth.signInWithCustomToken(window.__initial_auth_token);
+                } else {
+                  await auth.signInAnonymously();
+                }
+              } catch (err) {
+                console.error("Auth failed:", err);
+              }
+            };
+            initAuth();
+            const unsubscribe = auth.onAuthStateChanged(setUser);
+            return () => unsubscribe();
+          }, []);
 
-          useEffect(() => {
-            if (!user) return;
-            const evaluationsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations');
-            const unsubscribe = evaluationsRef.onSnapshot((snapshot) => {
-              const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              setHistory(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-            });
-            return () => unsubscribe();
-          }, [user]);
+          useEffect(() => {
+            if (!user) return;
+            const evaluationsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations');
+            const unsubscribe = evaluationsRef.onSnapshot((snapshot) => {
+              const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setHistory(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+            });
+            return () => unsubscribe();
+          }, [user]);
 
-          const uniqueNames = useMemo(() => Array.from(new Set(history.map(h => h.name))).sort(), [history]);
-          const uniqueTags = useMemo(() => Array.from(new Set(history.map(h => h.tag).filter(Boolean))).sort(), [history]);
+          const uniqueNames = useMemo(() => Array.from(new Set(history.map(h => h.name))).sort(), [history]);
+          const uniqueTags = useMemo(() => Array.from(new Set(history.map(h => h.tag).filter(Boolean))).sort(), [history]);
 
-          const filteredAndGroupedData = useMemo(() => {
-            const groups = {};
-            history.forEach(item => {
-              const matchesName = nameFilter === 'all' || item.name === nameFilter;
-              const matchesTag = tagFilter === 'all' || item.tag === tagFilter;
-              if (matchesName && matchesTag) {
-                if (!groups[item.name]) groups[item.name] = [];
-                groups[item.name].push(item);
-              }
-            });
-            return Object.entries(groups).sort((a, b) => b[1][0].timestamp.localeCompare(a[1][0].timestamp));
-          }, [history, nameFilter, tagFilter]);
+          const filteredAndGroupedData = useMemo(() => {
+            const groups = {};
+            history.forEach(item => {
+              const matchesName = nameFilter === 'all' || item.name === nameFilter;
+              const matchesTag = tagFilter === 'all' || item.tag === tagFilter;
+              if (matchesName && matchesTag) {
+                if (!groups[item.name]) groups[item.name] = [];
+                groups[item.name].push(item);
+              }
+            });
+            return Object.entries(groups).sort((a, b) => b[1][0].timestamp.localeCompare(a[1][0].timestamp));
+          }, [history, nameFilter, tagFilter]);
 
-          const processFile = (file, setter) => {
-            if (file && file.type.startsWith('image/')) {
-              const reader = new FileReader();
-              reader.onloadend = () => setter(reader.result.split(',')[1]);
-              reader.readAsDataURL(file);
-            }
-          };
+          const processFile = (file, setter) => {
+            if (file && file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onloadend = () => setter(reader.result.split(',')[1]);
+              reader.readAsDataURL(file);
+            }
+          };
 
-          const handleFileChange = (e, setter) => {
-            const file = e.target.files?.[0];
-            if (file) processFile(file, setter);
-          };
+          const handleFileChange = (e, setter) => {
+            const file = e.target.files?.[0];
+            if (file) processFile(file, setter);
+          };
 
-          const handleDrop = (e, setter) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) processFile(file, setter);
-          };
+          const handleDrop = (e, setter) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) processFile(file, setter);
+          };
 
-          useEffect(() => {
-            const handlePaste = (e) => {
-              const items = e.clipboardData?.items;
-              if (!items) return;
-              for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                  const file = items[i].getAsFile();
-                  if (file) {
-                    if (step === 1) processFile(file, setStandardImage);
-                    else if (step === 2) processFile(file, setTaskImage);
-                  }
-                  break;
-                }
-              }
-            };
-            window.addEventListener('paste', handlePaste);
-            return () => window.removeEventListener('paste', handlePaste);
-          }, [step]);
+          useEffect(() => {
+            const handlePaste = (e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                  const file = items[i].getAsFile();
+                  if (file) {
+                    if (step === 1) processFile(file, setStandardImage);
+                    else if (step === 2) processFile(file, setTaskImage);
+                  }
+                  break;
+                }
+              }
+            };
+            window.addEventListener('paste', handlePaste);
+            return () => window.removeEventListener('paste', handlePaste);
+          }, [step]);
 
-          const downloadCSV = () => {
-            if (history.length === 0) return;
-            const sorted = [...history].sort((a, b) => (a.tag || "").localeCompare(b.tag || ""));
-            const headers = ["성취기준태그", "평가일시", "학생이름", "등급", "점수", "관찰기록(A)", "힌트(B/C)", "성장분석"];
-            const rows = sorted.map(item => [
-              `"${item.tag}"`, item.date, item.name, item.grade, item.score,
-              item.score === 3 ? `"${item.observation}"` : "",
-              item.score !== 3 ? `"${item.feedback?.improve || ''}"` : "",
-              `"${item.progressNote || ''}"`
-            ]);
-            const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `교사_평가데이터_${new Date().toLocaleDateString()}.csv`;
-            link.click();
-          };
+          const downloadCSV = () => {
+            if (history.length === 0) return;
+            const sorted = [...history].sort((a, b) => (a.tag || "").localeCompare(b.tag || ""));
+            const headers = ["성취기준태그", "평가일시", "학생이름", "등급", "점수", "관찰기록(A)", "힌트(B/C)", "성장분석"];
+            const rows = sorted.map(item => [
+              `"${item.tag}"`, item.date, item.name, item.grade, item.score,
+              item.score === 3 ? `"${item.observation}"` : "",
+              item.score !== 3 ? `"${item.feedback?.improve || ''}"` : "",
+              `"${item.progressNote || ''}"`
+            ]);
+            const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `교사_평가데이터_${new Date().toLocaleDateString()}.csv`;
+            link.click();
+          };
 
-          const callGemini = async (isRevision = false) => {
-            if (isAnalyzing || !user) return;
-            setIsAnalyzing(true);
-            if (!isRevision) setStep(3);
+          const callGemini = async (isRevision = false) => {
+            if (isAnalyzing || !user) return;
+            setIsAnalyzing(true);
+            if (!isRevision) setStep(3);
 
-            const prevEntries = history.filter(e => e.name === studentName && e.tag === standardTag);
-            const prevSummary = prevEntries.length > 0 
-              ? `이 학생은 해당 성취기준에서 이전에 '${prevEntries[0].grade}' 등급을 받은 적이 있습니다.`
-              : "첫 제출입니다.";
+            const prevEntries = history.filter(e => e.name === studentName && e.tag === standardTag);
+            const prevSummary = prevEntries.length > 0 
+              ? `이 학생은 해당 성취기준에서 이전에 '${prevEntries[0].grade}' 등급을 받은 적이 있습니다.`
+              : "첫 제출입니다.";
 
-            const systemPrompt = `당신은 학생의 학습 상태를 분석하는 전문 교사입니다... (중략)`;
+            const systemPrompt = `
+              당신은 학생의 학습 상태를 정밀 분석하여 평가하는 전문 교사입니다. 
+              평가의 '정확성'이 최우선입니다. 
 
-            const parts = [
-              { text: `[활동지/성취기준]: ${standardTag}\n내용: ${standard || "이미지 참조"}` },
-              { text: `[학생 이름]: ${studentName}\n답변: ${taskContent || "이미지 참조"}` }
-            ];
-            if (standardImage) parts.push({ inlineData: { mimeType: "image/png", data: standardImage } });
-            if (taskImage) parts.push({ inlineData: { mimeType: "image/png", data: taskImage } });
+              [엄격한 평가 가이드라인]
+              1. 활동지 전수 조사: 제시된 활동지(텍스트/이미지)를 분석하여 질문의 개수와 내용을 정확히 파악하십시오.
+              2. 1:1 대조 정밀 채점: 질문과 학생 답변을 하나씩 대조하십시오.
+                 - 빈칸이나 무의미한 답변("몰라요" 등)이 하나라도 있다면 절대 3점(A) 등급을 주지 마십시오.
+                 - 과학적 용어/사실 오류(예: 응결을 증발로 씀)가 있다면 1~2점으로 엄격히 판정하십시오.
+              3. 3점(A) 관찰기록:
+                 - 반드시 '-함.', '-임.' 종결어미를 사용하십시오. (80자 이내)
+                 - 학생이 쓴 답변의 구체적인 특징을 인용하여 학생마다 다른 기록이 되게 하십시오.
+              4. 1~2점(B, C) 힌트 피드백:
+                 - 정답을 절대 알려주지 마십시오. 학생이 스스로 생각하게 하는 힌트나 질문만 제공하십시오.
+              5. 성장 기록: ${prevSummary} 이전과 비교하여 발전이 있다면 progressNote에 요약하십시오.
+              ${isRevision ? `\n\n[교사의 수정 요청]: "${teacherRevisionPrompt}"\n위 교사의 피드백을 적극 반영하여 결과를 다시 산출하십시오.` : ""}
+            `;
 
-            try {
-              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contents: [{ role: "user", parts }],
-                  systemInstruction: { parts: [{ text: systemPrompt }] },
-                  generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
-                })
-              });
-              
-              const data = await res.json();
-              const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-              
-              const newEntry = {
-                name: studentName,
-                tag: standardTag,
-                timestamp: new Date().toISOString(),
-                date: new Date().toLocaleString(),
-                ...parsed,
-                isRevision: isRevision
-              };
+            const parts = [
+              { text: `[활동지/성취기준]: ${standardTag}\n내용: ${standard || "이미지 참조"}` },
+              { text: `[학생 이름]: ${studentName}\n답변: ${taskContent || "이미지 참조"}` }
+            ];
+            if (standardImage) parts.push({ inlineData: { mimeType: "image/png", data: standardImage } });
+            if (taskImage) parts.push({ inlineData: { mimeType: "image/png", data: taskImage } });
 
-              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations').add(newEntry);
-              setResult(newEntry);
-              setStep(4);
-            } catch (error) {
-              console.error(error);
-            } finally {
-              setIsAnalyzing(false);
-            }
-          };
+            try {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ role: "user", parts }],
+                  systemInstruction: { parts: [{ text: systemPrompt }] },
+                  generationConfig: { 
+                    responseMimeType: "application/json",
+                    temperature: 0.1,
+                    responseSchema: {
+                      type: "OBJECT",
+                      properties: {
+                        score: { type: "NUMBER" },
+                        grade: { type: "STRING" },
+                        observation: { type: "STRING" },
+                        feedback: { type: "OBJECT", properties: { good: { type: "STRING" }, improve: { type: "STRING" } } },
+                        progressNote: { type: "STRING" }
+                      },
+                      required: ["score", "grade", "observation", "feedback", "progressNote"]
+                    }
+                  }
+                })
+              });
+              
+              const data = await res.json();
+              const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+              
+              const newEntry = {
+                name: studentName,
+                tag: standardTag,
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleString(),
+                ...parsed,
+                isRevision: isRevision
+              };
 
-          const resetForNewStandard = () => {
-            setStandard(''); setStandardTag(''); setStandardImage(null);
-            setStudentName(''); setTaskContent(''); setTaskImage(null);
-            setResult(null); setStep(1);
-          };
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations').add(newEntry);
+              
+              localStorage.setItem('hanji_std_tag', standardTag);
+              localStorage.setItem('hanji_std_content', standard);
+              
+              setResult(newEntry);
+              if (isRevision) {
+                setTeacherRevisionPrompt('');
+                setShowSuccessToast(true);
+                setTimeout(() => setShowSuccessToast(false), 3000);
+              }
+              setStep(4);
+            } catch (error) {
+              console.error(error);
+            } finally {
+              setIsAnalyzing(false);
+            }
+          };
 
-          // --- 화면 렌더링 부분 (선생님 코드와 동일) ---
-          return (
-            <div className="min-h-screen bg-[#FDFCFB] text-slate-800 p-4 md:p-8">
-               {/* 선생님이 주신 나머지 UI 코드들... */}
-               <h1 className="text-3xl font-black">한지쌤의 AI 서논술형 평가</h1>
-               <p className="mt-4">화면이 정상적으로 나오면 성공입니다!</p>
-               {/* (여기에 선생님의 return 안쪽 코드를 다 넣으면 됩니다) */}
-            </div>
-          );
+          const resetForNewStandard = () => {
+            setStandard(''); setStandardTag(''); setStandardImage(null);
+            setStudentName(''); setTaskContent(''); setTaskImage(null);
+            setResult(null); setStep(1);
+            localStorage.removeItem('hanji_std_tag');
+            localStorage.removeItem('hanji_std_content');
+          };
+
+          return (
+            <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-4 md:p-8 selection:bg-amber-100">
+              <div className="max-w-[1600px] mx-auto">
+                
+                {/* Success Toast */}
+                {showSuccessToast && (
+                  <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 duration-500">
+                    <div className="bg-slate-900 text-white px-8 py-4 rounded-3xl shadow-2xl flex items-center gap-3 border border-slate-700">
+                      <div className="bg-green-500 p-1 rounded-full"><CheckCircle className="w-4 h-4 text-white" /></div>
+                      <span className="font-bold">선생님의 의견을 반영하여 다시 평가했습니다.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Header */}
+                <header className="mb-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center shadow-sm border border-amber-100">
+                      <GraduationCap className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-black text-slate-900 tracking-tight">한지쌤의 AI 서논술형 평가</h1>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="bg-green-100 text-green-700 text-[10px] px-2.5 py-0.5 rounded-full font-black border border-green-200 flex items-center gap-1 shadow-sm">
+                          <Cloud className="w-3 h-3" /> 실시간 정확도 수합 가동 중
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={downloadCSV} className="flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl text-sm font-black hover:bg-slate-800 transition-all shadow-xl">
+                    <Download className="w-5 h-5" /> CSV 내려받기
+                  </button>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                  
+                  {/* Left: Work Panel */}
+                  <div className="lg:col-span-7 space-y-8">
+                    <div className="bg-white rounded-[3rem] shadow-[0_8px_40px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+                      <div className="p-8 md:p-14">
+                        {step === 1 && (
+                          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-4"><BookOpen className="w-8 h-8 text-amber-500" /> 평가 활동지 설정</h2>
+                            <div className="space-y-8">
+                              <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1"><TagIcon className="w-4 h-4" /> 성취기준 태그</label>
+                                <input type="text" className="w-full p-6 bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] outline-none font-black text-lg focus:bg-white focus:border-amber-400 transition-all shadow-inner" placeholder="예: 4과02-01" value={standardTag} onChange={(e) => setStandardTag(e.target.value)} />
+                              </div>
+                              <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1"><FileText className="w-4 h-4" /> 활동지 내용</label>
+                                <textarea className="w-full h-44 p-8 bg-slate-50 border-2 border-slate-50 rounded-[1.5rem] outline-none focus:bg-white focus:border-amber-400 transition-all text-slate-700 font-medium" placeholder="활동지의 구체적인 질문들을 적어주세요." value={standard} onChange={(e) => setStandard(e.target.value)} />
+                              </div>
+                              <div className="relative group" onDragOver={(e) => {e.preventDefault(); setIsDragging(true);}} onDragLeave={() => setIsDragging(false)} onDrop={(e) => handleDrop(e, setStandardImage)}>
+                                <input type="file" accept="image/*" className="hidden" id="std-img" onChange={(e) => handleFileChange(e, setStandardImage)} />
+                                <label htmlFor="std-img" className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-[2rem] cursor-pointer transition-all ${isDragging ? 'bg-amber-50 border-amber-400 scale-[1.01]' : 'bg-slate-50 border-slate-100 hover:border-amber-200'}`}>
+                                  {standardImage ? <div className="text-amber-600 font-bold flex flex-col items-center gap-4"><CheckCircle className="w-12 h-12 text-green-500"/> <span className="text-lg">활동지 이미지 등록 완료</span></div> : <div className="text-slate-300 flex flex-col items-center gap-5"><MousePointerSquareDashed className="w-12 h-12 opacity-50" /><span className="text-sm font-black text-slate-400 uppercase tracking-widest">활동지 사진 끌어넣기</span></div>}
+                                </label>
+                              </div>
+                            </div>
+                            <button onClick={() => (standard.trim() || standardImage) && setStep(2)} disabled={(!standard.trim() && !standardImage) || !standardTag.trim()} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-xl hover:bg-slate-800 transition-all shadow-xl">다음 단계</button>
+                          </div>
+                        )}
+
+                        {step === 2 && (
+                          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                            <div className="flex items-center justify-between border-b-2 border-slate-50 pb-8">
+                              <div className="flex items-center gap-5"><div className="bg-amber-400 text-white px-5 py-2 rounded-2xl font-black text-sm shadow-xl shadow-amber-100">{standardTag}</div><h2 className="text-3xl font-black text-slate-900 tracking-tighter">학생 과제 평가</h2></div>
+                              <button onClick={() => setStep(1)} className="text-sm font-black text-slate-400 hover:text-slate-600 transition-colors bg-slate-50 px-5 py-2.5 rounded-2xl">기준 수정</button>
+                            </div>
+                            <div className="space-y-10">
+                              <div className="space-y-4">
+                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2 flex items-center gap-2"><User className="w-4 h-4"/> 학생 이름</label>
+                                <input type="text" className="w-full p-7 bg-slate-50 border-2 border-slate-50 rounded-[2rem] outline-none font-black text-3xl focus:bg-white focus:border-amber-400 transition-all shadow-inner" placeholder="이름 입력" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="space-y-4">
+                                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">답변 (텍스트)</label>
+                                   <textarea className="w-full h-60 p-8 bg-slate-50 border-2 border-slate-50 rounded-[2rem] outline-none focus:bg-white focus:border-amber-400 transition-all text-base font-medium shadow-inner" placeholder="답변 입력..." value={taskContent} onChange={(e) => setTaskContent(e.target.value)} />
+                                </div>
+                                <div className="space-y-4">
+                                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2 flex justify-between"><span>과제 사진</span> <span className="text-amber-500 font-bold text-[10px]">Ctrl+V 지원</span></label>
+                                   <div className="relative h-60 group" onDragOver={(e) => {e.preventDefault(); setIsDragging(true);}} onDragLeave={() => setIsDragging(false)} onDrop={(e) => handleDrop(e, setTaskImage)}>
+                                     <input type="file" accept="image/*" className="hidden" id="task-img" onChange={(e) => handleFileChange(e, setTaskImage)} />
+                                     <label htmlFor="task-img" className={`flex flex-col items-center justify-center h-full border-2 border-dashed rounded-[2rem] cursor-pointer transition-all ${isDragging ? 'bg-amber-50 border-amber-400 scale-[1.01]' : taskImage ? 'bg-amber-50 border-amber-400' : 'bg-slate-50 border-slate-100 hover:border-amber-200 shadow-inner'}`}>
+                                       {taskImage ? <div className="text-amber-600 font-bold flex flex-col items-center gap-4"><ImageIcon className="w-12 h-12 shadow-sm"/><span>과제 사진 등록됨</span></div> : <div className="text-slate-300 flex flex-col items-center gap-4"><MousePointerSquareDashed className="w-12 h-12 opacity-50" /><span className="text-[11px] font-black text-center text-slate-400 px-6 uppercase tracking-widest font-black leading-relaxed">이미지 끌어넣기 또는<br/>Ctrl+V 붙여넣기</span></div>}
+                                     </label>
+                                     {taskImage && <button onClick={() => setTaskImage(null)} className="absolute top-5 right-5 p-2.5 bg-white rounded-full text-slate-400 hover:text-red-500 shadow-xl transition-colors"><X className="w-5 h-5"/></button>}
+                                   </div>
+                                </div>
+                              </div>
+                            </div>
+                            <button onClick={() => callGemini(false)} disabled={!studentName || (!taskContent && !taskImage)} className="w-full bg-amber-400 text-slate-900 py-8 rounded-[2rem] font-black text-2xl hover:bg-amber-300 transition-all flex items-center justify-center gap-5 shadow-[0_25px_50px_-12px_rgba(251,191,36,0.4)]">
+                              <Sparkles className="w-8 h-8" /> 교사 정밀 평가 시작
+                            </button>
+                          </div>
+                        )}
+
+                        {step === 3 && (
+                          <div className="py-48 flex flex-col items-center gap-12 animate-in fade-in duration-700">
+                            <div className="relative">
+                              <div className="w-36 h-36 border-[10px] border-amber-50 border-t-amber-400 rounded-full animate-spin"></div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                                <GraduationCap className="w-12 h-12 text-amber-300" />
+                              </div>
+                            </div>
+                            <div className="text-center space-y-5">
+                              <p className="text-4xl font-black text-slate-900 tracking-tight">현미경 대조 및 분석 중</p>
+                              <p className="text-slate-400 font-bold italic text-xl">누락된 답변이나 오개념을 꼼꼼하게 살피고 있습니다.</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {step === 4 && result && (
+                          <div className="space-y-12 animate-in zoom-in-95 duration-700">
+                            
+                            {/* FEEDBACK FIRST */}
+                            <div className={result.score === 3 ? "bg-[#F0FDF4] border-4 border-green-100 p-12 rounded-[4rem] shadow-2xl relative" : "bg-[#FFFBEB] border-4 border-amber-100 p-12 rounded-[4rem] shadow-2xl relative"}>
+                              <h4 className={`font-black text-3xl mb-8 flex items-center gap-5 ${result.score === 3 ? 'text-green-800' : 'text-amber-800'}`}>
+                                {result.score === 3 ? <CheckCircle className="w-10 h-10"/> : <Lightbulb className="w-10 h-10 animate-pulse text-amber-500"/>} 
+                                {result.score === 3 ? "생기부용 관찰기록 (80자)" : "성장 유도 힌트 피드백"}
+                              </h4>
+                              <div className="space-y-10">
+                                {result.score === 3 ? (
+                                  <p className="text-slate-800 leading-relaxed text-2xl font-bold break-keep whitespace-pre-wrap tracking-tight">
+                                    {result.observation}
+                                  </p>
+                                ) : (
+                                  <>
+                                    <div className="space-y-4">
+                                      <span className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> 정성껏 수행한 점</span>
+                                      <p className="text-2xl font-bold text-slate-700 italic leading-relaxed whitespace-pre-wrap">"{result.feedback?.good}"</p>
+                                    </div>
+                                    <div className="space-y-4 border-t-2 border-amber-100/50 pt-10">
+                                      <span className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center gap-3"><Lightbulb className="w-5 h-5" /> 스스로 생각해보기 (힌트)</span>
+                                      <p className="text-3xl font-black text-slate-800 italic leading-relaxed tracking-tight whitespace-pre-wrap">"{result.feedback?.improve}"</p>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Student Info */}
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-8 bg-white border-2 border-slate-50 p-10 rounded-[3rem] shadow-sm">
+                              <div className="flex items-center gap-8">
+                                <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center shadow-inner text-4xl font-black text-slate-400 border border-white">{result.name.charAt(0)}</div>
+                                <div>
+                                  <h3 className="font-black text-5xl text-slate-900 tracking-tight">{result.name}</h3>
+                                  <div className="flex items-center gap-4 mt-4">
+                                     <span className="bg-slate-900 text-white px-5 py-1.5 rounded-2xl text-xs font-black tracking-widest uppercase shadow-md">{result.tag}</span>
+                                     <span className="text-xs text-slate-300 font-bold tracking-widest">{result.date}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className={`px-12 py-6 rounded-[3rem] font-black text-6xl shadow-xl border-[6px] ${result.score === 3 ? 'bg-green-50 text-green-600 border-green-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                {result.grade} <span className="text-2xl font-bold opacity-40">({result.score}점)</span>
+                              </div>
+                            </div>
+
+                            {/* Teacher Revision Box (Enhanced Feedback) */}
+                            <div className="bg-slate-50/80 border-4 border-slate-100 p-10 rounded-[3rem] space-y-6 shadow-inner relative overflow-hidden group">
+                               <h4 className="font-black text-2xl text-slate-700 flex items-center gap-3 transition-colors group-focus-within:text-amber-600"><Edit3 className="w-6 h-6" /> 교사의 수정 의견</h4>
+                               <textarea 
+                                 className="w-full h-32 p-6 bg-white border-2 border-slate-100 rounded-[2rem] outline-none focus:border-amber-400 transition-all text-base font-medium shadow-sm"
+                                 placeholder="AI의 평가가 부족한 경우 의견을 적고 재평가 버튼을 누르세요. (예: 점수를 올려줘, 이 부분을 더 칭찬해줘 등)"
+                                 value={teacherRevisionPrompt}
+                                 onChange={(e) => setTeacherRevisionPrompt(e.target.value)}
+                               />
+                               <button 
+                                 onClick={() => callGemini(true)} 
+                                 disabled={!teacherRevisionPrompt.trim() || isAnalyzing} 
+                                 className="w-full flex items-center justify-center gap-3 bg-slate-800 text-white py-6 rounded-[1.8rem] font-black text-xl hover:bg-slate-700 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                               >
+                                 {isAnalyzing ? (
+                                   <>
+                                     <Loader2 className="w-6 h-6 animate-spin" />
+                                     <span>의견을 분석하여 반영 중...</span>
+                                   </>
+                                 ) : (
+                                   <>
+                                     <Send className="w-6 h-6" />
+                                     <span>의견 반영하여 다시 평가하기</span>
+                                   </>
+                                 )}
+                               </button>
+                            </div>
+
+                            <div className="flex flex-col gap-6">
+                              <button onClick={() => {setStudentName(''); setTaskContent(''); setTaskImage(null); setResult(null); setStep(2);}} className="w-full bg-amber-400 text-slate-900 py-8 rounded-[2.5rem] font-black text-3xl hover:bg-amber-300 transition-all shadow-2xl flex items-center justify-center gap-5 hover:translate-y-[-2px]">
+                                다음 학생 계속하기 <ChevronRight className="w-10 h-10" />
+                              </button>
+                              <div className="grid grid-cols-2 gap-6">
+                                <button onClick={() => setStep(1)} className="py-6 bg-slate-100 text-slate-600 rounded-[2rem] font-black text-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-4"><RefreshCw className="w-6 h-6" /> 활동지 수정</button>
+                                <button onClick={resetForNewStandard} className="py-6 bg-amber-50 text-amber-600 rounded-[2rem] font-black text-xl hover:bg-amber-100 transition-all flex items-center justify-center gap-4"><PlusCircle className="w-6 h-6" /> 새 성취기준 시작</button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Panel: Records History */}
+                  <div className="lg:col-span-5 space-y-10">
+                    <div className="bg-white rounded-[4rem] shadow-2xl border border-slate-100 overflow-hidden h-[calc(100vh-220px)] flex flex-col sticky top-8">
+                      <div className="p-10 border-b-2 border-slate-50 space-y-10 bg-slate-50/20">
+                        <div className="flex items-center justify-between">
+                           <h3 className="font-black text-3xl text-slate-900 flex items-center gap-5"><History className="w-8 h-8 text-amber-500" /> 실시간 누가기록</h3>
+                           <span className="bg-amber-400 text-white text-[11px] font-black px-5 py-2.5 rounded-full shadow-lg shadow-amber-100 animate-pulse">{history.length}건 기록</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1"><User className="w-3.5 h-3.5"/> 학생</label>
+                            <div className="relative">
+                              <select className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-black outline-none focus:border-amber-400 transition-all shadow-sm appearance-none cursor-pointer pr-12" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)}>
+                                <option value="all">전체</option>
+                                {uniqueNames.map(name => <option key={name} value={name}>{name}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1"><TagIcon className="w-3.5 h-3.5"/> 성취기준</label>
+                            <div className="relative">
+                              <select className="w-full p-5 bg-white border-2 border-slate-100 rounded-2xl text-sm font-black outline-none focus:border-amber-400 transition-all shadow-sm appearance-none cursor-pointer pr-12" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                                <option value="all">전체</option>
+                                {uniqueTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                              </select>
+                              <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-slate-50/10">
+                        {filteredAndGroupedData.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center text-slate-300 py-32 gap-8 opacity-40">
+                            <Filter className="w-20 h-20" />
+                            <p className="text-2xl font-black tracking-tight text-center px-12 leading-relaxed">기록이 없습니다.</p>
+                          </div>
+                        ) : (
+                          filteredAndGroupedData.map(([name, evals]) => (
+                            <div key={name} className="border-2 border-slate-50 rounded-[3rem] overflow-hidden bg-white shadow-sm hover:shadow-2xl transition-all group mb-6">
+                              <button onClick={() => setExpandedStudent(expandedStudent === name ? null : name)} className="w-full p-10 flex items-center justify-between hover:bg-slate-50/50 transition-all">
+                                <div className="flex items-center gap-8">
+                                  <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center font-black text-amber-500 text-3xl border-2 border-white shadow-inner group-hover:scale-105 transition-all">
+                                    {name.charAt(0)}
+                                  </div>
+                                  <div className="text-left"><p className="font-black text-3xl text-slate-900">{name}</p><p className="text-xs text-slate-400 font-black uppercase tracking-widest mt-2">{evals.length}회 평가 기록</p></div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                   <div className={`px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg ${evals[0].score === 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{evals[0].grade}</div>
+                                   <div className="bg-slate-100 p-3 rounded-full text-slate-300 transition-colors">
+                                     {expandedStudent === name ? <ChevronUp className="w-6 h-6 text-amber-500" /> : <ChevronDown className="w-6 h-6" />}
+                                   </div>
+                                </div>
+                              </button>
+                              
+                              {expandedStudent === name && (
+                                <div className="bg-slate-50/30 p-10 space-y-10 border-t-2 border-slate-50 animate-in slide-in-from-top-4 duration-300">
+                                  <div className="relative space-y-12 before:absolute before:left-[21px] before:top-4 before:bottom-4 before:w-[4px] before:bg-slate-100 before:rounded-full">
+                                    {evals.map((e, idx) => (
+                                      <div key={e.id} className="relative pl-14">
+                                        <div className={`absolute left-0 top-1.5 w-11 h-11 rounded-full border-[6px] border-white flex items-center justify-center text-xs font-black shadow-2xl z-10 ${e.score === 3 ? 'bg-green-400 text-white' : 'bg-amber-400 text-white'}`}>
+                                          {evals.length - idx}
+                                        </div>
+                                        <div className="bg-white p-9 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6 hover:border-amber-300 transition-colors">
+                                          <div className="flex justify-between items-center border-b-2 border-slate-50 pb-5">
+                                            <span className="bg-slate-900 text-white text-[10px] px-4 py-1.5 rounded-xl font-black shadow-md">{e.tag}</span>
+                                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{e.date}</p>
+                                          </div>
+                                          
+                                          <div className="space-y-6 w-full overflow-hidden">
+                                            <div className="flex items-start gap-5">
+                                               <div className={`mt-2.5 w-3 h-3 rounded-full shrink-0 ${e.score === 3 ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]'}`} />
+                                               <div className="space-y-4 w-full">
+                                                  <p className="text-[17px] text-slate-800 font-bold leading-relaxed break-keep whitespace-pre-wrap">
+                                                    {e.score === 3 ? e.observation : e.feedback?.improve}
+                                                  </p>
+                                                  {e.score !== 3 && e.feedback?.good && (
+                                                    <div className="bg-slate-50 p-6 rounded-[1.8rem] border border-slate-100 shadow-inner">
+                                                      <p className="text-[15px] text-slate-500 font-medium leading-relaxed italic">
+                                                        "칭찬: {e.feedback.good}"
+                                                      </p>
+                                                    </div>
+                                                  )}
+                                               </div>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex justify-end gap-4 border-t-2 border-slate-50 pt-6 mt-4">
+                                             {e.progressNote && (
+                                               <span className="bg-blue-50 text-blue-600 text-[10px] px-4 py-2 rounded-xl font-black flex items-center gap-2 shadow-sm border border-blue-100">
+                                                 <TrendingUp className="w-4 h-4"/> 성장 분석 완료
+                                               </span>
+                                             )}
+                                             <span className={`text-[11px] font-black px-5 py-2 rounded-xl shadow-md ${e.score === 3 ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                                               {e.grade}등급 ({e.score}점)
+                                             </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <style>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #f1f5f9; border-radius: 20px; border: 3px solid white; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #e2e8f0; }
+                @keyframes slide-in-from-bottom { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+                .animate-in { animation: slide-in-from-bottom 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+              `}</style>
+            </div>
+          );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
