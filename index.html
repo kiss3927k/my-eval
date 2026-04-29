@@ -11,33 +11,32 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; }
-    </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // 브라우저용 도구 설정
+        // 도구 불러오기
         const { useState, useEffect, useMemo } = React;
         const { Sparkles, ClipboardCheck, MessageSquare, Image: ImageIcon, RefreshCw, ChevronRight, User, BookOpen, FileText, X, MousePointerSquareDashed, CheckCircle, Download, History, TrendingUp, ChevronDown, ChevronUp, Search, Tag: TagIcon, Cloud, Lightbulb, PlusCircle, Filter, Edit3, Send, Table, GraduationCap, Loader2 } = lucide;
 
-        // Firebase 도구 연결
+        // --- 선생님 코드 실행용 환경 설정 ---
         const initializeApp = firebase.initializeApp;
         const getAuth = () => firebase.auth();
         const signInWithCustomToken = (auth, token) => auth.signInWithCustomToken(token);
         const signInAnonymously = (auth) => auth.signInAnonymously();
-        const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
+        const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
         const getFirestore = () => firebase.firestore();
         const collection = (db, ...path) => db.collection(path.join('/'));
-        const addDoc = (colRef, data) => colRef.add(data);
-        const onSnapshot = (ref, callback) => ref.onSnapshot(callback);
+        const addDoc = (col, data) => col.add(data);
+        const onSnapshot = (ref, cb) => ref.onSnapshot(cb);
+        const query = (ref) => ref;
+        const doc = (db, ...path) => db.doc(path.join('/'));
+        const setDoc = (ref, data) => ref.set(data);
 
         // --- 선생님의 원본 코드 시작 ---
-        
-        // Firebase 초기화
+
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -45,235 +44,211 @@
         const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'default-app-id';
 
         const App = () => {
-          const [user, setUser] = useState(null);
-          const [step, setStep] = useState(1); 
-          
-          // 상태 관리
-          const [standardTag, setStandardTag] = useState(localStorage.getItem('hanji_std_tag') || '');
-          const [standard, setStandard] = useState(localStorage.getItem('hanji_std_content') || '');
-          const [standardImage, setStandardImage] = useState(null); 
-          const [studentName, setStudentName] = useState('');
-          const [taskContent, setTaskContent] = useState('');
-          const [taskImage, setTaskImage] = useState(null);
-          const [isAnalyzing, setIsAnalyzing] = useState(false);
-          const [result, setResult] = useState(null);
-          const [history, setHistory] = useState([]);
-          
-          // 교사 수정 의견 상태
-          const [teacherRevisionPrompt, setTeacherRevisionPrompt] = useState('');
-          const [showSuccessToast, setShowSuccessToast] = useState(false);
-          
-          // 드롭박스 필터 상태
-          const [nameFilter, setNameFilter] = useState('all');
-          const [tagFilter, setTagFilter] = useState('all');
-          const [expandedStudent, setExpandedStudent] = useState(null);
-          const [isDragging, setIsDragging] = useState(false);
+          const [user, setUser] = useState(null);
+          const [step, setStep] = useState(1); 
+          const [standardTag, setStandardTag] = useState(localStorage.getItem('hanji_std_tag') || '');
+          const [standard, setStandard] = useState(localStorage.getItem('hanji_std_content') || '');
+          const [standardImage, setStandardImage] = useState(null); 
+          const [studentName, setStudentName] = useState('');
+          const [taskContent, setTaskContent] = useState('');
+          const [taskImage, setTaskImage] = useState(null);
+          const [isAnalyzing, setIsAnalyzing] = useState(false);
+          const [result, setResult] = useState(null);
+          const [history, setHistory] = useState([]);
+          const [teacherRevisionPrompt, setTeacherRevisionPrompt] = useState('');
+          const [showSuccessToast, setShowSuccessToast] = useState(false);
+          const [nameFilter, setNameFilter] = useState('all');
+          const [tagFilter, setTagFilter] = useState('all');
+          const [expandedStudent, setExpandedStudent] = useState(null);
+          const [isDragging, setIsDragging] = useState(false);
 
-          const apiKey = "AIzaSyD5ffyr61te_nF4HwsAG41BOQ79lczEzGw"; 
+          const apiKey = "AIzaSyD5ffyr61te_nF4HwsAG41BOQ79lczEzGw"; 
 
-          useEffect(() => {
-            const initAuth = async () => {
-              try {
-                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                  await auth.signInWithCustomToken(window.__initial_auth_token);
-                } else {
-                  await auth.signInAnonymously();
-                }
-              } catch (err) {
-                console.error("Auth failed:", err);
-              }
-            };
-            initAuth();
-            const unsubscribe = auth.onAuthStateChanged(setUser);
-            return () => unsubscribe();
-          }, []);
+          useEffect(() => {
+            const initAuth = async () => {
+              try {
+                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                  await auth.signInWithCustomToken(window.__initial_auth_token);
+                } else {
+                  await auth.signInAnonymously();
+                }
+              } catch (err) { console.error(err); }
+            };
+            initAuth();
+            const unsubscribe = auth.onAuthStateChanged(setUser);
+            return () => unsubscribe();
+          }, []);
 
-          useEffect(() => {
-            if (!user) return;
-            const evaluationsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations');
-            const unsubscribe = evaluationsRef.onSnapshot((snapshot) => {
-              const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              setHistory(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-            });
-            return () => unsubscribe();
-          }, [user]);
+          useEffect(() => {
+            if (!user) return;
+            const evaluationsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations');
+            const unsubscribe = evaluationsRef.onSnapshot((snapshot) => {
+              const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              setHistory(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+            });
+            return () => unsubscribe();
+          }, [user]);
 
-          const uniqueNames = useMemo(() => Array.from(new Set(history.map(h => h.name))).sort(), [history]);
-          const uniqueTags = useMemo(() => Array.from(new Set(history.map(h => h.tag).filter(Boolean))).sort(), [history]);
+          const uniqueNames = useMemo(() => Array.from(new Set(history.map(h => h.name))).sort(), [history]);
+          const uniqueTags = useMemo(() => Array.from(new Set(history.map(h => h.tag).filter(Boolean))).sort(), [history]);
 
-          const filteredAndGroupedData = useMemo(() => {
-            const groups = {};
-            history.forEach(item => {
-              const matchesName = nameFilter === 'all' || item.name === nameFilter;
-              const matchesTag = tagFilter === 'all' || item.tag === tagFilter;
-              if (matchesName && matchesTag) {
-                if (!groups[item.name]) groups[item.name] = [];
-                groups[item.name].push(item);
-              }
-            });
-            return Object.entries(groups).sort((a, b) => b[1][0].timestamp.localeCompare(a[1][0].timestamp));
-          }, [history, nameFilter, tagFilter]);
+          const filteredAndGroupedData = useMemo(() => {
+            const groups = {};
+            history.forEach(item => {
+              const matchesName = nameFilter === 'all' || item.name === nameFilter;
+              const matchesTag = tagFilter === 'all' || item.tag === tagFilter;
+              if (matchesName && matchesTag) {
+                if (!groups[item.name]) groups[item.name] = [];
+                groups[item.name].push(item);
+              }
+            });
+            return Object.entries(groups).sort((a, b) => b[1][0].timestamp.localeCompare(a[1][0].timestamp));
+          }, [history, nameFilter, tagFilter]);
 
-          const processFile = (file, setter) => {
-            if (file && file.type.startsWith('image/')) {
-              const reader = new FileReader();
-              reader.onloadend = () => setter(reader.result.split(',')[1]);
-              reader.readAsDataURL(file);
-            }
-          };
+          const processFile = (file, setter) => {
+            if (file && file.type.startsWith('image/')) {
+              const reader = new FileReader();
+              reader.onloadend = () => setter(reader.result.split(',')[1]);
+              reader.readAsDataURL(file);
+            }
+          };
 
-          const handleFileChange = (e, setter) => {
-            const file = e.target.files?.[0];
-            if (file) processFile(file, setter);
-          };
+          const handleFileChange = (e, setter) => {
+            const file = e.target.files?.[0];
+            if (file) processFile(file, setter);
+          };
 
-          const handleDrop = (e, setter) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) processFile(file, setter);
-          };
+          const handleDrop = (e, setter) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) processFile(file, setter);
+          };
 
-          useEffect(() => {
-            const handlePaste = (e) => {
-              const items = e.clipboardData?.items;
-              if (!items) return;
-              for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                  const file = items[i].getAsFile();
-                  if (file) {
-                    if (step === 1) processFile(file, setStandardImage);
-                    else if (step === 2) processFile(file, setTaskImage);
-                  }
-                  break;
-                }
-              }
-            };
-            window.addEventListener('paste', handlePaste);
-            return () => window.removeEventListener('paste', handlePaste);
-          }, [step]);
+          useEffect(() => {
+            const handlePaste = (e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                  const file = items[i].getAsFile();
+                  if (file) {
+                    if (step === 1) processFile(file, setStandardImage);
+                    else if (step === 2) processFile(file, setTaskImage);
+                  }
+                  break;
+                }
+              }
+            };
+            window.addEventListener('paste', handlePaste);
+            return () => window.removeEventListener('paste', handlePaste);
+          }, [step]);
 
-          const downloadCSV = () => {
-            if (history.length === 0) return;
-            const sorted = [...history].sort((a, b) => (a.tag || "").localeCompare(b.tag || ""));
-            const headers = ["성취기준태그", "평가일시", "학생이름", "등급", "점수", "관찰기록(A)", "힌트(B/C)", "성장분석"];
-            const rows = sorted.map(item => [
-              `"${item.tag}"`, item.date, item.name, item.grade, item.score,
-              item.score === 3 ? `"${item.observation}"` : "",
-              item.score !== 3 ? `"${item.feedback?.improve || ''}"` : "",
-              `"${item.progressNote || ''}"`
-            ]);
-            const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `교사_평가데이터_${new Date().toLocaleDateString()}.csv`;
-            link.click();
-          };
+          const downloadCSV = () => {
+            if (history.length === 0) return;
+            const sorted = [...history].sort((a, b) => (a.tag || "").localeCompare(b.tag || ""));
+            const headers = ["성취기준태그", "평가일시", "학생이름", "등급", "점수", "관찰기록(A)", "힌트(B/C)", "성장분석"];
+            const rows = sorted.map(item => [
+              `"${item.tag}"`, item.date, item.name, item.grade, item.score,
+              item.score === 3 ? `"${item.observation}"` : "",
+              item.score !== 3 ? `"${item.feedback?.improve || ''}"` : "",
+              `"${item.progressNote || ''}"`
+            ]);
+            const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `교사_평가데이터_${new Date().toLocaleDateString()}.csv`;
+            link.click();
+          };
 
-          const callGemini = async (isRevision = false) => {
-            if (isAnalyzing || !user) return;
-            setIsAnalyzing(true);
-            if (!isRevision) setStep(3);
+          const callGemini = async (isRevision = false) => {
+            if (isAnalyzing || !user) return;
+            setIsAnalyzing(true);
+            if (!isRevision) setStep(3);
+            const prevEntries = history.filter(e => e.name === studentName && e.tag === standardTag);
+            const prevSummary = prevEntries.length > 0 
+              ? `이 학생은 해당 성취기준에서 이전에 '${prevEntries[0].grade}' 등급을 받은 적이 있습니다.`
+              : "첫 제출입니다.";
+            const systemPrompt = `당신은 학생의 학습 상태를 정밀 분석하여 평가하는 전문 교사입니다. 평가의 '정확성'이 최우선입니다... (중략)`;
 
-            const prevEntries = history.filter(e => e.name === studentName && e.tag === standardTag);
-            const prevSummary = prevEntries.length > 0 
-              ? `이 학생은 해당 성취기준에서 이전에 '${prevEntries[0].grade}' 등급을 받은 적이 있습니다.`
-              : "첫 제출입니다.";
+            const parts = [
+              { text: `[활동지/성취기준]: ${standardTag}\n내용: ${standard || "이미지 참조"}` },
+              { text: `[학생 이름]: ${studentName}\n답변: ${taskContent || "이미지 참조"}` }
+            ];
+            if (standardImage) parts.push({ inlineData: { mimeType: "image/png", data: standardImage } });
+            if (taskImage) parts.push({ inlineData: { mimeType: "image/png", data: taskImage } });
 
-            const systemPrompt = `당신은 학생의 학습 상태를 정밀 분석하여 평가하는 전문 교사입니다... (중략)`;
+            try {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{ role: "user", parts }],
+                  systemInstruction: { parts: [{ text: systemPrompt }] },
+                  generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+                })
+              });
+              const data = await res.json();
+              const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+              const newEntry = { name: studentName, tag: standardTag, timestamp: new Date().toISOString(), date: new Date().toLocaleString(), ...parsed, isRevision: isRevision };
+              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations').add(newEntry);
+              setResult(newEntry);
+              setStep(4);
+            } catch (error) { console.error(error); } finally { setIsAnalyzing(false); }
+          };
 
-            const parts = [
-              { text: `[활동지/성취기준]: ${standardTag}\n내용: ${standard || "이미지 참조"}` },
-              { text: `[학생 이름]: ${studentName}\n답변: ${taskContent || "이미지 참조"}` }
-            ];
-            if (standardImage) parts.push({ inlineData: { mimeType: "image/png", data: standardImage } });
-            if (taskImage) parts.push({ inlineData: { mimeType: "image/png", data: taskImage } });
+          const resetForNewStandard = () => {
+            setStandard(''); setStandardTag(''); setStandardImage(null); setStudentName(''); setTaskContent(''); setTaskImage(null); setResult(null); setStep(1);
+          };
 
-            try {
-              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  contents: [{ role: "user", parts }],
-                  systemInstruction: { parts: [{ text: systemPrompt }] },
-                  generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
-                })
-              });
-              
-              const data = await res.json();
-              const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
-              
-              const newEntry = {
-                name: studentName,
-                tag: standardTag,
-                timestamp: new Date().toISOString(),
-                date: new Date().toLocaleString(),
-                ...parsed,
-                isRevision: isRevision
-              };
+          return (
+            <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-4 md:p-8">
+              <div className="max-w-[1600px] mx-auto">
+                <header className="mb-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100">
+                      <GraduationCap className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <h1 className="text-3xl font-black text-slate-900">한지쌤의 AI 서논술형 평가</h1>
+                  </div>
+                </header>
 
-              await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('evaluations').add(newEntry);
-              setResult(newEntry);
-              setStep(4);
-            } catch (error) {
-              console.error(error);
-            } finally {
-              setIsAnalyzing(false);
-            }
-          };
-
-          const resetForNewStandard = () => {
-            setStandard(''); setStandardTag(''); setStandardImage(null);
-            setStudentName(''); setTaskContent(''); setTaskImage(null);
-            setResult(null); setStep(1);
-          };
-
-          return (
-            <div className="min-h-screen bg-[#FDFCFB] text-slate-800 font-sans p-4 md:p-8">
-              <div className="max-w-[1600px] mx-auto">
-                <header className="mb-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b-2 border-slate-100 pb-8">
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100">
-                      <GraduationCap className="w-8 h-8 text-amber-500" />
-                    </div>
-                    <h1 className="text-3xl font-black text-slate-900">한지쌤의 AI 서논술형 평가</h1>
-                  </div>
-                  <button onClick={downloadCSV} className="bg-slate-900 text-white px-8 py-4 rounded-2xl text-sm font-black shadow-xl">CSV 내려받기</button>
-                </header>
-
-                <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-14">
-                  {step === 1 && (
-                    <div className="space-y-10 animate-in">
-                      <h2 className="text-2xl font-black text-slate-900">평가 활동지 설정</h2>
-                      <input type="text" className="w-full p-6 bg-slate-50 border-2 rounded-[1.5rem]" placeholder="성취기준 태그" value={standardTag} onChange={(e) => setStandardTag(e.target.value)} />
-                      <textarea className="w-full h-44 p-8 bg-slate-50 border-2 rounded-[1.5rem]" placeholder="활동지 내용" value={standard} onChange={(e) => setStandard(e.target.value)} />
-                      <button onClick={() => setStep(2)} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black text-xl">다음 단계</button>
-                    </div>
-                  )}
-                  {step === 2 && (
-                    <div className="space-y-10 animate-in">
-                      <h2 className="text-2xl font-black text-slate-900">학생 과제 평가</h2>
-                      <input type="text" className="w-full p-7 bg-slate-50 border-2 rounded-[2rem] font-black text-3xl" placeholder="학생 이름" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
-                      <textarea className="w-full h-60 p-8 bg-slate-50 border-2 rounded-[2rem]" placeholder="답변 내용" value={taskContent} onChange={(e) => setTaskContent(e.target.value)} />
-                      <button onClick={() => callGemini(false)} className="w-full bg-amber-400 text-slate-900 py-8 rounded-[2rem] font-black text-2xl shadow-xl">AI 정밀 평가 시작</button>
-                    </div>
-                  )}
-                  {step === 3 && <div className="py-48 text-center text-4xl font-black animate-pulse">분석 중...</div>}
-                  {step === 4 && result && (
-                    <div className="space-y-8 animate-in">
-                      <div className="bg-green-50 p-10 rounded-[3rem] border-4 border-green-100">
-                        <h3 className="text-2xl font-black text-green-800 mb-4">평가 결과</h3>
-                        <p className="text-4xl font-black">{result.grade} ({result.score}점)</p>
-                        <p className="mt-6 text-xl leading-relaxed">{result.observation}</p>
-                      </div>
-                      <button onClick={resetForNewStandard} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black">처음으로</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                  <div className="lg:col-span-12">
+                    <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-14">
+                      {step === 1 && (
+                        <div className="space-y-10">
+                          <h2 className="text-2xl font-black">1단계: 평가 설정</h2>
+                          <input type="text" className="w-full p-6 bg-slate-50 border-2 rounded-[1.5rem]" placeholder="성취기준 태그" value={standardTag} onChange={(e) => setStandardTag(e.target.value)} />
+                          <textarea className="w-full h-44 p-8 bg-slate-50 border-2 rounded-[1.5rem]" placeholder="활동지 내용" value={standard} onChange={(e) => setStandard(e.target.value)} />
+                          <button onClick={() => setStep(2)} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black">다음 단계</button>
+                        </div>
+                      )}
+                      {step === 2 && (
+                        <div className="space-y-10">
+                          <h2 className="text-2xl font-black">2단계: 과제 입력</h2>
+                          <input type="text" className="w-full p-7 bg-slate-50 border-2 rounded-[2rem] text-3xl font-black" placeholder="이름" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+                          <textarea className="w-full h-60 p-8 bg-slate-50 border-2 rounded-[2rem]" placeholder="답변" value={taskContent} onChange={(e) => setTaskContent(e.target.value)} />
+                          <button onClick={() => callGemini(false)} className="w-full bg-amber-400 text-slate-900 py-8 rounded-[2rem] font-black text-2xl">평가 시작</button>
+                        </div>
+                      )}
+                      {step === 3 && <div className="py-48 text-center text-4xl font-black animate-pulse">AI 분석 중...</div>}
+                      {step === 4 && result && (
+                        <div className="space-y-10 text-center">
+                          <div className="bg-green-50 p-10 rounded-[3rem] border-4 border-green-100">
+                            <p className="text-6xl font-black">{result.grade}</p>
+                            <p className="mt-8 text-2xl">{result.observation}</p>
+                          </div>
+                          <button onClick={resetForNewStandard} className="w-full bg-slate-900 text-white py-6 rounded-[1.5rem] font-black">다시 시작</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
